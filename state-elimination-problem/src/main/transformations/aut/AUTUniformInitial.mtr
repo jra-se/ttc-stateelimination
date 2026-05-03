@@ -1,0 +1,10 @@
+/* (c) https://github.com/MontiCore/monticore */
+
+
+automaton $_ {
+  state $initialName <<initial>>;
+
+  state $sName << [[ initial :- ]] >>;
+
+  [[ :- $initialName -e> $sName; ]]
+}

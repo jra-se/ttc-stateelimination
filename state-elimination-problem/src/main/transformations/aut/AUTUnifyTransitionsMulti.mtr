@@ -1,0 +1,10 @@
+/* (c) https://github.com/MontiCore/monticore */
+
+automaton $_ {
+  [[ $A - $y > $B; :- ]]
+  $A - [[ $x :- $xNew ]] > $B;
+}
+
+assign {
+  $xNew = "(" + $x + "|" + $y + ")";
+}

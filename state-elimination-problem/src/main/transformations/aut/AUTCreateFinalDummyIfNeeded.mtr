@@ -1,0 +1,11 @@
+/* (c) https://github.com/MontiCore/monticore */
+
+
+automaton $_ {
+  state $sName << [[ final :- ]] >>;
+
+  $sName - $_> $_;
+
+  [[ :- state xFinal<<final>>; ]]
+  [[ :- $sName -e> xFinal; ]]
+}

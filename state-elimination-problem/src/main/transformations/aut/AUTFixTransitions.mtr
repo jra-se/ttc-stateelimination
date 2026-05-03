@@ -1,0 +1,25 @@
+/* (c) https://github.com/MontiCore/monticore */
+
+automaton $_ {
+  state $cur;
+
+  $A - $ACLabel > $cur;
+  $cur - $CBLabel > $B;
+  opt [[ Transition $LOOP [[ $cur - $loopLabel > $cur; ]] ]]
+
+  [[ :- $NEWT [[ $A - $updatedLabel > $B; ]] ]]
+}
+
+// No folding required for identifiers
+
+assign {
+  $updatedLabel = "UNDEFINED";
+}
+
+do {
+  if ($LOOP.isPresent()) {
+    m.$NEWT.setInput($ACLabel + "(" + $loopLabel + ")*"  + $CBLabel);
+  } else {
+    m.$NEWT.setInput($ACLabel + $CBLabel);
+  }
+}

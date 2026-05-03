@@ -1,0 +1,182 @@
+plugins {
+    id 'java'
+    id "java-library"
+    id "de.monticore.generator-withtr" version "$mc_version" // MontiCore Plugin
+    id "com.gradleup.shadow" version "9.2.0"
+}
+
+import de.monticore.MontiTransExec
+
+layout.buildDirectory = layout.projectDirectory.dir("build")
+
+group = 'ttc.state-elimination'
+version = '1.0-SNAPSHOT'
+
+def grammarDir = "src/main/grammars"
+def scTrafoDir = "src/main/transformations/sc"
+def autTrafoDir = "src/main/transformations/aut"
+def grammarOutDir = file(layout.buildDirectory.dir("generated-sources"))
+def testGrammarOutDir = file(layout.buildDirectory.dir("generated-sources/mc"))
+
+sourceSets {
+    test {
+        java.srcDirs += [ "$testGrammarOutDir"]
+    }
+    main {
+        java.srcDirs += [ "$grammarOutDir"]
+
+    }
+    grammars {
+        resources {
+            srcDirs += grammarDir
+            include "**/*.mc4"
+        }
+    }
+}
+
+configurations { grammar }
+
+dependencies {
+    grammar group: 'de.monticore.lang', name: 'statecharts', version: mc_version
+    grammar group: 'de.monticore.lang', name: 'statecharts-trafo', version: mc_version
+
+    grammar group: 'de.monticore.lang', name: 'automaton', version: mc_version
+    grammar group: 'de.monticore.lang', name: 'automaton-trafo', version: mc_version
+
+    implementation group: 'de.se_rwth.commons', name: 'se-commons-groovy', version: commons_version
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:$junit_version"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:$junit_version"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+
+    compileOnly 'org.freemarker:freemarker:2.3.34'
+
+    implementation(project(path: ':emf-to-automaton', configuration: 'textualModels'))
+}
+
+repositories {
+    if (("true").equals(getProperty('useLocalRepo'))) {
+        mavenLocal()
+    }
+    mavenCentral()
+    maven {
+        url repo
+    }
+}
+
+// Fixes issue with java plugin in projects without resources
+compileTestJava.doFirst { mkdir sourceSets.test.output.resourcesDir }
+
+tasks.withType(Test).configureEach {
+    maxParallelForks = Runtime.runtime.availableProcessors() ?: 1
+}
+
+
+java {
+    withSourcesJar()
+    registerFeature('grammars') {
+        usingSourceSet(sourceSets.grammars)
+    }
+}
+
+jar.dependsOn grammarsJar
+
+tasks.register('generateStatechartTRRules') {
+    group 'montitrans'
+}
+
+tasks.register('generateAutomatonTRRules') {
+    group 'montitrans'
+}
+
+fileTree(dir: "$scTrafoDir", include: '**/**.mtr').each {
+    def g = it
+    def taskname = "generateUMLStatechartTRRules${it.getName().substring(0, it.getName().lastIndexOf('.'))}"
+    tasks.register("$taskname", MontiTransExec) {
+        group = "montitrans"
+        getClassPath().setFrom(configurations.compileClasspath + configurations.runtimeClasspath)
+        TFGenTool = 'de.monticore.tr.UMLStatechartsTFGenTool'
+        input = file(g)
+        outputDir = file(layout.buildDirectory.dir("generated-sources"))
+
+        getHandWrittenCodeDir().from(file("src/main/java"))
+    }
+    generateStatechartTRRules.dependsOn("$taskname")
+}
+
+fileTree(dir: "$autTrafoDir", include: '**/**.mtr').each {
+    def g = it
+    def taskname = "generateAutomataTRRules${it.getName().substring(0, it.getName().lastIndexOf('.'))}"
+    tasks.register("$taskname", MontiTransExec) {
+        group = "montitrans"
+        getClassPath().setFrom(configurations.compileClasspath + configurations.runtimeClasspath)
+        TFGenTool = 'tr.AutomataTFGenTool'
+        input = file(g)
+        outputDir = file(layout.buildDirectory.dir("generated-sources"))
+        getHandWrittenCodeDir().from(file("src/main/java"))
+    }
+    generateAutomatonTRRules.dependsOn("$taskname")
+}
+
+
+// Comment me out for a faster build - this task has to run at least once
+[compileJava, sourcesJar].forEach {
+    t -> t.dependsOn(tasks.generateStatechartTRRules, tasks.generateAutomatonTRRules)
+}
+// The generate TRRules Tasks are not cached/etc
+
+tasks.register('buildAll', GradleBuild) {
+    tasks = ['build']
+}
+
+jar {
+    archiveClassifier = null
+}
+
+
+test {
+    useJUnitPlatform()
+    minHeapSize = "4g"
+    maxHeapSize = "32g"
+}
+
+tasks.register('runSolution', Test) {
+    useJUnitPlatform()
+
+    minHeapSize = "4g"
+    maxHeapSize = "32g"
+
+    filter {
+        includeTestsMatching("ttc.stateelimination.aut.AutCorrectnessTest")
+    }
+}
+
+tasks.register('runBenchmark', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'ttc.stateelimination.aut.Benchmark'
+    workingDir = file("..")
+
+    minHeapSize = "4g"
+    maxHeapSize = "32g"
+}
+
+// prepare pre-build jar for the docker image
+def testShadowJar = tasks.register('testShadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description = 'Create a combined JAR of project and test dependencies'
+
+    archiveClassifier = 'test'
+    from sourceSets.named('test').map { it.output }
+    from sourceSets.named('main').map { it.output }
+    configurations = project.configurations.named('testRuntimeClasspath').map { [it] }
+
+    manifest {
+        // Optionally, set the main class for the JAR.
+        attributes 'Main-Class': tasks.named("runBenchmark").get().mainClass
+        // You can also set other attributes here.
+    }
+}
+
+tasks.named('assemble') {
+    dependsOn testShadowJar
+}

@@ -1,0 +1,8 @@
+/* (c) https://github.com/MontiCore/monticore */
+
+automaton $_ {
+  [[ state $sName; :- ]]
+
+  [[ list [[ $_ - $_ > $sName;  ]] :- ]]
+  [[ list [[ $sName - $_ > $_; ]] :- ]]
+}

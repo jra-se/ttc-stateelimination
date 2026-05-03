@@ -1,0 +1,17 @@
+/* (c) https://github.com/MontiCore/monticore */
+pluginManagement {
+  repositories {
+    if (("true").equals(getProperty('useLocalRepo'))) {
+      mavenLocal()
+    }
+    maven {
+      url repo
+    }
+    gradlePluginPortal()
+  }
+}
+
+rootProject.name = 'ttc-stateelimination'
+
+include(':state-elimination-problem')
+include(':emf-to-automaton')

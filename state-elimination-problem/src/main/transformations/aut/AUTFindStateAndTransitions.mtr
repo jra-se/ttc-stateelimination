@@ -1,0 +1,8 @@
+/* (c) https://github.com/MontiCore/monticore */
+
+automaton $_ {
+  $S [[ state $cur <<not [[initial]]>> <<not [[final]]>>; ]]
+
+  list $INCOMING [[ $_ - $_ > $cur; ]]
+  list $OUTGOING [[ $cur - $_ > $_; ]]
+}

@@ -1,0 +1,49 @@
+plugins {
+    id 'java'
+    id "de.monticore.generator" version "$mc_version" // MontiCore Plugin
+}
+
+group = 'ttc-stateelimination'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    if (("true").equals(getProperty('useLocalRepo'))) {
+        mavenLocal()
+    }
+    mavenCentral()
+    maven {
+        url repo
+    }
+}
+
+dependencies {
+    grammar group: 'de.monticore.lang', name: 'automaton', version: mc_version
+
+    implementation "org.eclipse.emf:org.eclipse.emf.ecore:2.42.0"
+    implementation "org.eclipse.emf:org.eclipse.emf.common:2.45.0"
+    implementation "org.eclipse.emf:org.eclipse.emf.ecore.xmi:2.40.0"
+
+    testImplementation "org.junit.jupiter:junit-jupiter:$junit_version"
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.register('runEmfToAUT', JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'tcc.stateelimination.converter.EmfToAUT'
+    workingDir = file("..")
+    outputs.dir(layout.buildDirectory.dir('testdata'))
+}
+
+
+configurations{
+    textualModels {
+        canBeConsumed = true
+    }
+}
+artifacts {
+    textualModels(tasks.named("runEmfToAUT"))
+}
