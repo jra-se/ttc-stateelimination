@@ -1,6 +1,7 @@
 FROM gradle:8.14.4-jdk21
 
 WORKDIR /home/gradle/src
+LABEL org.opencontainers.image.description="A MontiCore solution to the TTC 2017 State Elimination case"
 
 ADD models models
 ADD emf-to-automaton emf-to-automaton
