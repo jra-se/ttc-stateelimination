@@ -49,7 +49,8 @@ public class AutCorrectnessTest extends TestFramework {
       "leader5_5",
       "leader6_4",
       "leader6_5",
-      "leader6_6"
+      "leader6_6",
+      "leaderselfloops"
   })
   @Timeout(value = 10, unit = TimeUnit.MINUTES, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
   public void test(String modelName) {
