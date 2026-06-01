@@ -5,20 +5,17 @@ automaton $_ {
 
   $A - $ACLabel > $cur;
   $cur - $CBLabel > $B;
-  opt [[ Transition $LOOP [[ $cur - $loopLabel > $cur; ]] ]]
+  opt [[ list $LOOPS [[ $cur - $loopLabel > $cur; ]] ]]
 
-  [[ :- $NEWT [[ $A - $updatedLabel > $B; ]] ]]
+  [[ :- $NEWT [[ $A - UNDEFINED > $B; ]] ]]
 }
 
 // No folding required for identifiers
 
-assign {
-  $updatedLabel = "UNDEFINED";
-}
-
 do {
-  if ($LOOP.isPresent()) {
-    m.$NEWT.setInput($ACLabel + "(" + $loopLabel + ")*"  + $CBLabel);
+  if ($LOOPS.isPresent()) {
+    m.$NEWT.setInput($ACLabel + "(" + $loopLabel_list.stream().map(lbl -> "(" + lbl + ")")
+     .collect(Collectors.joining("|")) + ")*"  + $CBLabel);
   } else {
     m.$NEWT.setInput($ACLabel + $CBLabel);
   }
